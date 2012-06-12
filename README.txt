@@ -14,7 +14,7 @@ Test:
 To run clang-extract on a small test:
 * make test
 
-You'll notice the output format is actually python code so you can parse it with thus 
+You'll notice the output format is actually python code so you can parse it thus :
 def parse(text):
 	output = # your output structure
 	def Method(id, recordid, typeid, name, static):

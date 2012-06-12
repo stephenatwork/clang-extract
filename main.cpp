@@ -1,3 +1,5 @@
+// Copyright (c) 2012 Havok. All rights reserved. This file is distributed under the terms
+// and conditions defined in file 'LICENSE.txt', which is part of this source code package.
 
 #pragma warning(push,0)
 	#include <llvm/Support/Host.h>
