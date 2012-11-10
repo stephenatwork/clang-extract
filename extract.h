@@ -24,7 +24,7 @@ namespace Havok
 			virtual void Initialize(ASTContext& context);
 			virtual void InitializeSema(Sema& sema);
 			// Base callback coming from LLVM (used to accumulate all declarations)
-			virtual void HandleTopLevelDecl(DeclGroupRef DG);
+			virtual bool HandleTopLevelDecl(DeclGroupRef DG);
 
 			enum DumpBits
 			{

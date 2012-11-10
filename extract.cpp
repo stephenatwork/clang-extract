@@ -183,7 +183,7 @@ void Havok::ExtractASTConsumer::declareImplicitMethods(Decl* declIn)
 // This includes top-level classes, namespaces, typedefs, constants, enums, functions
 // in every included header file. Contained elements are children of a top-level element.
 // Every element that is parsed is in here somewhere
-void Havok::ExtractASTConsumer::HandleTopLevelDecl(DeclGroupRef declGroupIn)
+bool Havok::ExtractASTConsumer::HandleTopLevelDecl(DeclGroupRef declGroupIn)
 {
 	// If there are multiple declarations with the same semantic type in the same scope they are
 	// returned as a group. [ e.g. class A { ... } B; ] Usually each group only contains one declaration.
@@ -192,6 +192,8 @@ void Havok::ExtractASTConsumer::HandleTopLevelDecl(DeclGroupRef declGroupIn)
 		declareImplicitMethods(*iter);
 		m_decls.push_back(*iter);
 	}
+
+	return true;
 }
 
 void Havok::ExtractASTConsumer::dumpAllDeclarations()

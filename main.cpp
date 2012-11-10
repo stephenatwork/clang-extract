@@ -48,7 +48,7 @@ namespace Havok
 	{
 		public:
 
-			virtual ModuleKey loadModule(SourceLocation, IdentifierInfo&, SourceLocation)
+			virtual Module* loadModule(SourceLocation, ModuleIdPath, Module::NameVisibilityKind, bool)
 			{
 				assert(0);
 				return 0;
@@ -147,12 +147,12 @@ int main(int argc, char **argv)
 		diagnostics.setDiagnosticMapping(clang::diag::warn_undefined_internal, clang::diag::MAP_IGNORE, clang::SourceLocation()); //-Wno-undefined-internal
 
 		clang::TargetOptions targetOptions;
-		targetOptions.Triple = llvm::sys::getHostTriple();
+		targetOptions.Triple = llvm::sys::getDefaultTargetTriple();
 		llvm::IntrusiveRefCntPtr<clang::TargetInfo> targetInfo( clang::TargetInfo::CreateTargetInfo(diagnostics, targetOptions ) );	
 		clang::FileSystemOptions filesystemOptions;
 		clang::FileManager fileManager(filesystemOptions);
 		clang::SourceManager sourceManager(diagnostics, fileManager);
-		clang::HeaderSearch headerSearch(fileManager);
+
 		Havok::ModuleLoader moduleLoader;
 		clang::LangOptions langOptions;
 		langOptions.CPlusPlus = 1;
@@ -162,6 +162,8 @@ int main(int argc, char **argv)
 		langOptions.AssumeSaneOperatorNew = 1;
 		langOptions.ImplicitInt = 0;
 		langOptions.ElideConstructors = 0;
+
+		clang::HeaderSearch headerSearch(fileManager, diagnostics, langOptions, targetInfo.getPtr());
 
 		clang::Preprocessor preprocessor(diagnostics, langOptions, targetInfo.getPtr(), sourceManager, headerSearch, moduleLoader);
 		
