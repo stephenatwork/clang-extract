@@ -10,7 +10,7 @@
 	#include "clang/Frontend/CompilerInstance.h"
 #pragma warning(pop)
 
-namespace Havok 
+namespace Havok
 {
 	using namespace clang;
 
@@ -67,7 +67,7 @@ namespace Havok
 			int getNamespaceId_i(const NamespaceDecl* namespaceDecl);
 			// More utility functions
 			void addOrReplaceSpecializationTypeParameterTypes_i(const TemplateParameterList* paramList);
-			
+
 			// Some types of dump entry are routed through this class to unify default handling.
 			class DumpEntry
 			{
@@ -101,7 +101,7 @@ namespace Havok
 			protected:
 				// Output a comma, if necessary.
 				void checkOutputComma();
-			
+
 			protected:
 				EntryType m_entryType;
 				/// Used to put commas in the correct position.
@@ -114,7 +114,7 @@ namespace Havok
 				DumpEntry& operator=(DumpEntry& other);
 			};
 
-			
+
 			// List of declarations, declarations are collected and then dumped in a second phase
 			std::list<const clang::Decl*> m_decls;
 
@@ -154,7 +154,7 @@ namespace Havok
 					int m_uidNext;
 			};
 			UidAllocator m_uid;
-			
+
 			// Dumping configuration bits
 			DumpBits m_dumpBits;
 
@@ -162,9 +162,9 @@ namespace Havok
 			Sema* m_sema;
 
 		private:
-			
+
 			ExtractASTConsumer& operator=(ExtractASTConsumer& other);
-	}; 
+	};
 }
 
 #endif //RAW_DUMP_H

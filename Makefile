@@ -30,7 +30,7 @@ ifeq ($(CONFIG),Release)
 	CXXFLAGS += -DNDEBUG -g3 -O3
 endif
 
-SRCS := extract.cpp main.cpp 
+SRCS := extract.cpp main.cpp
 $(EXENAME) : $(SRCS) extract.h Makefile
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o $@ $(SRCS) $(LIBS)
 

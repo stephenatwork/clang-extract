@@ -79,7 +79,7 @@ namespace Havok
 	{
 		public:
 
-			FilenamePatternExcluder(clang::Preprocessor& preprocessor, clang::SourceManager& sourceManager) 
+			FilenamePatternExcluder(clang::Preprocessor& preprocessor, clang::SourceManager& sourceManager)
 				: PPCallbacks(), m_sourceManager(sourceManager), m_preprocessor(preprocessor)
 			{}
 
@@ -92,13 +92,13 @@ namespace Havok
 			}
 
 			virtual void InclusionDirective(
-				SourceLocation, 
-				const Token&, 
-				StringRef fileName, 
-				bool, 
+				SourceLocation,
+				const Token&,
+				StringRef fileName,
+				bool,
 				CharSourceRange,
 				const FileEntry* file,
-				StringRef, 
+				StringRef,
 				StringRef,
 				const Module*)
 			{
@@ -123,7 +123,7 @@ namespace Havok
 			}
 
 		protected:
-			
+
 			// Included file patterns that will be skipped, these string should contain
 			// OS-style wildcards to exclude sets of files based on their name.
 			std::vector<std::string> m_excludedPatterns;
@@ -191,7 +191,7 @@ int main(int argc, char **argv)
         preprocessor->Initialize(*targetInfo);
 
         diagnosticConsumer.BeginSourceFile (langOptions, preprocessor.get());
-		
+
 		Havok::FilenamePatternExcluder* filenamePatternExcluder = new Havok::FilenamePatternExcluder(*preprocessor.get(), sourceManager);
 		preprocessor->addPPCallbacks(filenamePatternExcluder); // the preprocessor is now owner of the FilenamePatternExcluder
 		clang::HeaderSearchOptions headerSearchOptions;
@@ -200,7 +200,7 @@ int main(int argc, char **argv)
 		std::string errorInfo;
 		llvm::raw_fd_ostream outstream(o_outputFilename.c_str(), errorInfo, llvm::sys::fs::OpenFlags::F_None);
 		{
-			// Gather input files into a memory 
+			// Gather input files into a memory
 			std::string mainFileText;
 			llvm::raw_string_ostream stream(mainFileText);
 
@@ -281,7 +281,7 @@ int main(int argc, char **argv)
 			}
 			for( std::vector<std::string>::iterator iter = o_inputFilenames.begin(), end = o_inputFilenames.end(); iter != end; ++iter )
 			{
-				stream << "#include<" << iter->c_str() << ">\n";
+				stream << "#include <" << iter->c_str() << ">\n";
 				outstream << "InvocationInput( path='" << iter->c_str() << "' )\n";
 			}
 			stream.flush();

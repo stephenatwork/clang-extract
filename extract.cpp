@@ -46,7 +46,7 @@ static FileID s_getFileId(const SourceLocation& loc, SourceManager& sm)
 	assert(loc.isFileID() && "not a file location");
 	FileID ret = sm.getFileID(loc);
 	assert(!ret.isInvalid() && "invalid file id for declaration");
-	
+
 	return ret;
 }
 
@@ -83,7 +83,7 @@ static void s_printAnnotations(llvm::raw_ostream& os, const Decl* decl, int decl
 	{
 		const AttrVec& attrVec = decl->getAttrs();
 		for( specific_attr_iterator<AnnotateAttr> iterator = specific_attr_begin<AnnotateAttr>(attrVec), end_iterator = specific_attr_end<AnnotateAttr>(attrVec);
-			iterator != end_iterator; 
+			iterator != end_iterator;
 			++iterator )
 		{
 			os << "Annotation( refid=" << declId << ", text=\"\"\"";
@@ -165,7 +165,7 @@ void Havok::ExtractASTConsumer::declareImplicitMethods(Decl* declIn)
 	{
 		CXXRecordDecl* recordDecl = dyn_cast<CXXRecordDecl>(declIn);
 		assert(recordDecl && "The declaration should be a record declaration.");
-		
+
 		if(!recordDecl->isCompleteDefinition())
 			return;
 
@@ -514,7 +514,7 @@ int Havok::ExtractASTConsumer::dumpDecl_i(const Decl* declIn)
 		}
 	}
 	else if( const EnumConstantDecl* enumConstantDecl = dyn_cast<EnumConstantDecl>(declIn) )
-	{	
+	{
 		// the enum has already been dumped
 		int enumId = getTypeId_i( enumConstantDecl->getType().getTypePtr() );
 		m_os << "EnumConstant( enumId=" << enumId;
@@ -620,13 +620,13 @@ int Havok::ExtractASTConsumer::dumpNonQualifiedSimpleType_i(const Type* typeIn, 
 
 	// clean the type from any sugar used to specify it in source code (elaborated types)
 	typeIn = s_getTrueType(typeIn);
-	
+
 	{
 		const TemplateSpecializationType* templateSpecializationType = typeIn->getAs<TemplateSpecializationType>();
 		if( templateSpecializationType &&
 			(typeIn->getAs<TypedefType>() == NULL) ) // not a typedef to a template specialization type
 		{
-			// this type is dumped in case of an explicit instantiation when this function 
+			// this type is dumped in case of an explicit instantiation when this function
 			// is called from dumpTemplateClassSpecialization_i(), or in case of an
 			// implicit instantiation when this function is called in a generic way to
 			// dump a needed type.
@@ -634,17 +634,17 @@ int Havok::ExtractASTConsumer::dumpNonQualifiedSimpleType_i(const Type* typeIn, 
 			return dumpTemplateInstantiationType_i(templateSpecializationType);
 		}
 	}
-	
+
 	// seen this type before?
 	int retId = findTypeId_i(typeIn);
 	if(retId != -1)
 	{
 		return retId;
 	}
-	
+
 	if( const TypedefType* bt = typeIn->getAs<TypedefType>() )
 	{
-		// sometimes TypedefTypes can also be casted to InjectedClassNameTypes, 
+		// sometimes TypedefTypes can also be casted to InjectedClassNameTypes,
 		// for this reason we need to handle this first.
 		int tid = dumpType_i(bt->getDecl()->getUnderlyingType());
 		retId = m_uid.alloc();
@@ -738,7 +738,7 @@ int Havok::ExtractASTConsumer::dumpNonQualifiedSimpleType_i(const Type* typeIn, 
 // 		int eid = _dumpType( bt->getElementType().getTypePtr() );
 // 		retId = m_uid.alloc();
 // 		m_os << "ArrayType id='" << retId << "' elemId='" << eid << "' count='" << bt->getSizeExpr() ->getType().getTypePtr() << "'\n";
-	}		
+	}
 	else if( const DependentNameType* bt = typeIn->getAs<DependentNameType>() )
 	{
 		retId = m_uid.alloc();
@@ -792,7 +792,7 @@ int Havok::ExtractASTConsumer::dumpTemplateInstantiationType_i(
 		TemplateName templateName = templateSpecializationType->getTemplateName();
 		TemplateDecl* templateDecl = templateName.getAsTemplateDecl();
 		assert(templateDecl && "could not retrieve template declaration");
-		
+
 		ClassTemplateDecl* classTemplateDecl = dyn_cast<ClassTemplateDecl>(templateDecl);
 		const Decl* scopeDiscoveryDecl = NULL;
 		const ClassTemplateSpecializationDecl* classTemplateInstantiationDecl = NULL;
@@ -814,7 +814,7 @@ int Havok::ExtractASTConsumer::dumpTemplateInstantiationType_i(
 					break;
 				}
 			}
-			assert((classTemplateInstantiationDecl || templateSpecializationType->isDependentType()) && 
+			assert((classTemplateInstantiationDecl || templateSpecializationType->isDependentType()) &&
 				"could not retrieve template specialization declaration for instantiation");
 			// classTemplateInstantiationDecl will be NULL only if the template instance is dependent from a template parameter
 			if(classTemplateInstantiationDecl != NULL)
@@ -828,7 +828,7 @@ int Havok::ExtractASTConsumer::dumpTemplateInstantiationType_i(
 		}
 		else
 		{
-			const TemplateTemplateParmDecl* templateTemplateParmDecl = 
+			const TemplateTemplateParmDecl* templateTemplateParmDecl =
 				dyn_cast<TemplateTemplateParmDecl>(templateDecl);
 			assert(templateTemplateParmDecl && "template declaration is not a class template or template parameter");
 			scopeDiscoveryDecl = templateTemplateParmDecl->getCanonicalDecl();
@@ -840,12 +840,12 @@ int Havok::ExtractASTConsumer::dumpTemplateInstantiationType_i(
 		int scopeid = dumpScope_i(scopeDiscoveryDecl);
 
 		retId = m_uid.alloc();
-		m_os << "TemplateRecordInstantiationType( id=" << retId << ", templateid=" 
+		m_os << "TemplateRecordInstantiationType( id=" << retId << ", templateid="
 			<< templateId;
 		if(classTemplateInstantiationDecl != NULL)
 		{
 			s_printRecordFlags(m_os, classTemplateInstantiationDecl);
-		} 
+		}
 		else
 		{
 			s_printDefaultRecordFlags(m_os);
@@ -882,7 +882,7 @@ int Havok::ExtractASTConsumer::dumpTemplateInstantiationType_i(
 }
 
 int Havok::ExtractASTConsumer::dumpTemplateSpecializationType_i(
-	const ClassTemplateSpecializationDecl* classTemplateSpecializationDecl, 
+	const ClassTemplateSpecializationDecl* classTemplateSpecializationDecl,
 	int scopeId )
 {
 	const TemplateArgumentList& argList = classTemplateSpecializationDecl->getTemplateArgs();
@@ -911,12 +911,12 @@ int Havok::ExtractASTConsumer::dumpTemplateSpecializationType_i(
 	int templateId = getTypeId_i(m_context->getRecordType(templatedDecl).getTypePtr());
 
 	retId = m_uid.alloc();
-	m_os << "TemplateRecordSpecialization( id=" << retId << ", templateid=" 
+	m_os << "TemplateRecordSpecialization( id=" << retId << ", templateid="
 		<< templateId;
 	s_printRecordFlags(m_os, classTemplateSpecializationDecl);
 	m_os << ", scopeid=" << scopeId << " )\n";
 
-	if(const ClassTemplatePartialSpecializationDecl* classTemplatePartialSpecializationDecl = 
+	if(const ClassTemplatePartialSpecializationDecl* classTemplatePartialSpecializationDecl =
 		dyn_cast<ClassTemplatePartialSpecializationDecl>(classTemplateSpecializationDecl))
 	{
 		// 2: dump the parameters
@@ -934,14 +934,14 @@ int Havok::ExtractASTConsumer::dumpTemplateSpecializationType_i(
 		// list we might refer to the types dumped in the parameter list (T1 in the above example). This cannot happen in
 		// case of explicit instantiation of course.
 		// The type returned by LLVM for T1 in the argument list <T1, 5, int> is not the same we dumped in the previous step,
-		// that type must be present in the map for everything to work properly, and that's why we do a special operation 
+		// that type must be present in the map for everything to work properly, and that's why we do a special operation
 		// adding (or replacing) all those types with the id obtained by looking up the Parameter list type.
 		addOrReplaceSpecializationTypeParameterTypes_i(classTemplatePartialSpecializationDecl->getTemplateParameters());
 	}
 
 	// 4: dump the argument list
-	dumpTemplateArgumentList_i(templateSpecializationType->getArgs(), 
-		templateSpecializationType->getNumArgs(), 
+	dumpTemplateArgumentList_i(templateSpecializationType->getArgs(),
+		templateSpecializationType->getNumArgs(),
 		retId);
 
 	m_knownTypes[recordType] = retId;
@@ -1005,7 +1005,7 @@ void Havok::ExtractASTConsumer::dumpSpecifiersRecursive_i(const NestedNameSpecif
 	{
 		if( dyn_cast<TemplateSpecializationType>(specifierType) )
 			dumpNonQualifiedSimpleType_i(specifierType);
-	} 
+	}
 }
 
 void Havok::ExtractASTConsumer::dumpTypeSpecifiers_i( const Type* type )
@@ -1090,10 +1090,10 @@ void Havok::ExtractASTConsumer::dumpTemplateClass_i(const ClassTemplateDecl* cla
 		m_knownTypes[injectedClassnameType] = templateId;
 
 		// 1: dump template parameter list
-		const TemplateParameterList* paramList = 
-			classTemplateDef != NULL ? 
-			classTemplateDef->getTemplateParameters() : 
-			classTemplateDecl->getTemplateParameters();	
+		const TemplateParameterList* paramList =
+			classTemplateDef != NULL ?
+			classTemplateDef->getTemplateParameters() :
+			classTemplateDecl->getTemplateParameters();
 		dumpTemplateParameterList_i(paramList, templateId);
 	}
 
@@ -1110,7 +1110,7 @@ void Havok::ExtractASTConsumer::dumpTemplateClass_i(const ClassTemplateDecl* cla
 		// We dump type T1 (type template parameter) when dumping the Parameter list above, but when dumping the parent
 		// type we might refer to the types dumped in the parameter list (T1 in the above example).
 		// The type returned by LLVM for T1 in the argument list <T1, 5, int> is not the same we dumped in the previous step,
-		// that type must be present in the map for everything to work properly, and that's why we do a special operation 
+		// that type must be present in the map for everything to work properly, and that's why we do a special operation
 		// adding (or replacing) all those types with the id obtained by looking up the Parameter list type.
 		addOrReplaceSpecializationTypeParameterTypes_i(classTemplateDecl->getTemplateParameters());
 
@@ -1136,14 +1136,14 @@ void Havok::ExtractASTConsumer::dumpTemplateClassSpecialization_i(const ClassTem
 			classTemplateSpecializationDef = dyn_cast<ClassTemplateSpecializationDecl>(classTemplateSpecializationDefRecord);
 
 		int scopeId = dumpScope_i(classTemplateSpecializationDefRecord != NULL ? classTemplateSpecializationDefRecord : classTemplateSpecializationDecl);
- 		
+
 		// 1: dump the TemplateSpecializationRecord entry
 		// dump template specializations using specific function
 		int templateId = dumpTemplateSpecializationType_i(classTemplateSpecializationDef != NULL ? classTemplateSpecializationDef : classTemplateSpecializationDecl, scopeId);
 
 		if(classTemplateSpecializationDecl->isThisDeclarationADefinition())
 		{
-			if(const ClassTemplatePartialSpecializationDecl* classTemplatePartialSpecializationDecl = 
+			if(const ClassTemplatePartialSpecializationDecl* classTemplatePartialSpecializationDecl =
 				dyn_cast<ClassTemplatePartialSpecializationDecl>(classTemplateSpecializationDecl))
 			{
 				// 2: add special entries in the type map for types referred by template parameters, consider the following template class declaration:
@@ -1157,7 +1157,7 @@ void Havok::ExtractASTConsumer::dumpTemplateClassSpecialization_i(const ClassTem
 				// We dump type T1 (type template parameter) when dumping the Parameter list above, but when dumping the parent
 				// type we might refer to the types dumped in the parameter list (T1 in the above example).
 				// The type returned by LLVM for T1 in the argument list <T1, 5, int> is not the same we dumped in the previous step,
-				// that type must be present in the map for everything to work properly, and that's why we do a special operation 
+				// that type must be present in the map for everything to work properly, and that's why we do a special operation
 				// adding (or replacing) all those types with the id obtained by looking up the Parameter list type.
 				addOrReplaceSpecializationTypeParameterTypes_i(classTemplatePartialSpecializationDecl->getTemplateParameters());
 			}
@@ -1167,7 +1167,7 @@ void Havok::ExtractASTConsumer::dumpTemplateClassSpecialization_i(const ClassTem
 		}
 	}
 	else if(kind == TSK_ExplicitInstantiationDefinition)
-	{	
+	{
 		const TemplateArgumentList& argList = classTemplateSpecializationDecl->getTemplateArgs();
 		const QualType canonType = m_context->getRecordType(classTemplateSpecializationDecl);
 		TemplateName tempName(classTemplateSpecializationDecl->getSpecializedTemplate());
@@ -1201,8 +1201,8 @@ void Havok::ExtractASTConsumer::dumpTemplateParameterList_i(const TemplateParame
 		else if ( const TemplateTypeParmDecl* templateTypeParmDecl = dyn_cast<TemplateTypeParmDecl>(paramDecl) )
 		{
 			int typeId = dumpType_i(m_context->getTemplateTypeParmType(
-				templateTypeParmDecl->getDepth(), 
-				templateTypeParmDecl->getIndex(), 
+				templateTypeParmDecl->getDepth(),
+				templateTypeParmDecl->getIndex(),
 				templateTypeParmDecl->isParameterPack(),
 				const_cast<TemplateTypeParmDecl*>(templateTypeParmDecl)));
 			m_os << "TemplateTypeParamType( templateid=" << templateId << ", id=" << typeId;
@@ -1240,10 +1240,10 @@ void Havok::ExtractASTConsumer::dumpTemplateArgumentList_i(const TemplateArgumen
 	{
 		if(argv[i].getKind() == TemplateArgument::Type)
 		{
-			QualType qualType = argv[i].getAsType(); 
+			QualType qualType = argv[i].getAsType();
 			int typeId = dumpType_i(qualType);
 			m_os << "TemplateSpecializationTypeArg( recordid=" << templateId << ", typeid=" << typeId << " )\n";
-		} 
+		}
 		else if(argv[i].getKind() == TemplateArgument::Template)
 		{
 			TemplateName templateName = argv[i].getAsTemplate();
@@ -1258,7 +1258,7 @@ void Havok::ExtractASTConsumer::dumpTemplateArgumentList_i(const TemplateArgumen
 			}
 			else
 			{
-				const TemplateTemplateParmDecl* templateTemplateParmDecl = 
+				const TemplateTemplateParmDecl* templateTemplateParmDecl =
 					dyn_cast<TemplateTemplateParmDecl>(templateDecl);
 				assert(templateTemplateParmDecl && "template declaration is not a class template or template parameter");
 				KnownTemplateTemplateParamMap::const_iterator it = m_knowTemplateTemplateParams.find(templateTemplateParmDecl->getCanonicalDecl());
@@ -1330,16 +1330,16 @@ void Havok::ExtractASTConsumer::addOrReplaceSpecializationTypeParameterTypes_i(c
 		if ( const TemplateTypeParmDecl* templateTypeParmDecl = dyn_cast<TemplateTypeParmDecl>(paramDecl))
 		{
 			int typeId = getTypeId_i(m_context->getTemplateTypeParmType(
-				templateTypeParmDecl->getDepth(), 
-				templateTypeParmDecl->getIndex(), 
+				templateTypeParmDecl->getDepth(),
+				templateTypeParmDecl->getIndex(),
 				templateTypeParmDecl->isParameterPack(),
 				const_cast<TemplateTypeParmDecl*>(templateTypeParmDecl)).getTypePtr());
 			const Type* newType = m_context->getTemplateTypeParmType(
-				templateTypeParmDecl->getDepth(), 
-				templateTypeParmDecl->getIndex(), 
+				templateTypeParmDecl->getDepth(),
+				templateTypeParmDecl->getIndex(),
 				templateTypeParmDecl->isParameterPack()).getTypePtr();
 			m_knownTypes[newType] = typeId;
-		} 
+		}
 	}
 }
 
