@@ -8,7 +8,7 @@
 	#include <llvm/Support/Path.h>
 
 	#include <clang/Frontend/Utils.h>
-	#include <clang/Frontend/DiagnosticOptions.h>
+	#include <clang/Basic/DiagnosticOptions.h>
 	#include <clang/Frontend/FrontendDiagnostic.h>
 	#include <clang/Frontend/TextDiagnosticPrinter.h>
 	#include <clang/Lex/Preprocessor.h>
@@ -16,6 +16,7 @@
 	#include <clang/Basic/TargetInfo.h>
 	#include <clang/Basic/FileManager.h>
 	#include <clang/Lex/HeaderSearch.h>
+	#include <clang/Lex/ModuleLoader.h>
 	#include <clang/Sema/SemaDiagnostic.h>
 #pragma warning(pop)
 
@@ -34,6 +35,9 @@ static inline bool s_fileNameMatch(const char* path, const char* pattern)
 #undef GetCurrentDirectory // remove annoying define from windows header
 #else
 #include <fnmatch.h>
+#if defined(__APPLE__)
+#include <libgen.h>
+#endif
 static inline bool s_fileNameMatch(const char* path, const char* pattern)
 {
 	const char* base = basename( const_cast<char*>(path) );
@@ -48,11 +52,23 @@ namespace Havok
 	{
 		public:
 
-			virtual ModuleKey loadModule(SourceLocation, IdentifierInfo&, SourceLocation)
+			virtual ModuleLoadResult loadModule(SourceLocation,
+												ModuleIdPath,
+												Module::NameVisibilityKind,
+												bool) override
 			{
 				assert(0);
-				return 0;
+				return clang::ModuleLoadResult();
 			}
+
+			virtual void makeModuleVisible(Module *,
+										   Module::NameVisibilityKind,
+										   SourceLocation,
+										   bool) override
+			{
+				assert(0);
+			}
+
 	};
 	// Preprocessor callbacks used to exclude specific included files (with #include)
 	// When the preprocessor processes a file, it will generate callbacks to this object
@@ -63,8 +79,8 @@ namespace Havok
 	{
 		public:
 
-			FilenamePatternExcluder(clang::Preprocessor& preprocessor, clang::SourceManager& sourceManager) 
-				: PPCallbacks(), m_preprocessor(preprocessor), m_sourceManager(sourceManager)
+			FilenamePatternExcluder(clang::Preprocessor& preprocessor, clang::SourceManager& sourceManager)
+				: PPCallbacks(), m_sourceManager(sourceManager), m_preprocessor(preprocessor)
 			{}
 
 			~FilenamePatternExcluder()
@@ -76,14 +92,15 @@ namespace Havok
 			}
 
 			virtual void InclusionDirective(
-				SourceLocation, 
-				const Token&, 
-				StringRef fileName, 
-				bool, 
+				SourceLocation,
+				const Token&,
+				StringRef fileName,
+				bool,
+				CharSourceRange,
 				const FileEntry* file,
-				SourceLocation, 
-				StringRef, 
-				StringRef )
+				StringRef,
+				StringRef,
+				const Module*)
 			{
 				m_preprocessor.SetSuppressIncludeNotFoundError(false);
 				for(unsigned int i = 0; i < m_excludedPatterns.size(); ++i)
@@ -106,7 +123,7 @@ namespace Havok
 			}
 
 		protected:
-			
+
 			// Included file patterns that will be skipped, these string should contain
 			// OS-style wildcards to exclude sets of files based on their name.
 			std::vector<std::string> m_excludedPatterns;
@@ -137,52 +154,63 @@ int main(int argc, char **argv)
 	int exitStatus;
 
 	 //_CrtSetDbgFlag( _CRTDBG_ALLOC_MEM_DF | _CRTDBG_DELAY_FREE_MEM_DF | _CRTDBG_CHECK_EVERY_1024_DF | _CRTDBG_LEAK_CHECK_DF );
-	llvm::cl::ParseCommandLineOptions(argc, argv, "Help Text Here", true);
+	llvm::cl::ParseCommandLineOptions(argc, argv, "Help Text Here");
 	llvm::MemoryBuffer* emptyMemoryBuffer = llvm::MemoryBuffer::getNewMemBuffer(0, "emptyMemoryBuffer");
 	{
-		clang::TextDiagnosticPrinter diagnosticConsumer(llvm::errs(), clang::DiagnosticOptions(), false);
+        llvm::IntrusiveRefCntPtr<clang::DiagnosticOptions> DO(new clang::DiagnosticOptions());
+		clang::TextDiagnosticPrinter diagnosticConsumer(llvm::errs(), DO.get(), false);
 		llvm::IntrusiveRefCntPtr<clang::DiagnosticIDs> diagnosticIDs(new clang::DiagnosticIDs());
-		clang::DiagnosticsEngine diagnostics(diagnosticIDs, &diagnosticConsumer, false);
+        llvm::IntrusiveRefCntPtr<clang::DiagnosticsEngine> diagnosticsEngine(new clang::DiagnosticsEngine(diagnosticIDs, DO.get(), &diagnosticConsumer, false));
 		// ignored warnings
-		diagnostics.setDiagnosticMapping(clang::diag::warn_undefined_internal, clang::diag::MAP_IGNORE, clang::SourceLocation()); //-Wno-undefined-internal
+		//diagnosticsEngine.setDiagnosticMapping(clang::diag::warn_undefined_internal, clang::diag::MAP_IGNORE, clang::SourceLocation()); //-Wno-undefined-internal
 
-		clang::TargetOptions targetOptions;
-		targetOptions.Triple = llvm::sys::getHostTriple();
-		llvm::IntrusiveRefCntPtr<clang::TargetInfo> targetInfo( clang::TargetInfo::CreateTargetInfo(diagnostics, targetOptions ) );	
+        std::shared_ptr<clang::TargetOptions> targetOptions(new clang::TargetOptions());
+		targetOptions->Triple = llvm::sys::getDefaultTargetTriple();
+		llvm::IntrusiveRefCntPtr<clang::TargetInfo> targetInfo(clang::TargetInfo::CreateTargetInfo(*diagnosticsEngine, targetOptions ));
 		clang::FileSystemOptions filesystemOptions;
 		clang::FileManager fileManager(filesystemOptions);
-		clang::SourceManager sourceManager(diagnostics, fileManager);
-		clang::HeaderSearch headerSearch(fileManager);
-		Havok::ModuleLoader moduleLoader;
+		clang::SourceManager sourceManager(*diagnosticsEngine, fileManager);
+
+		llvm::IntrusiveRefCntPtr<clang::HeaderSearchOptions> HSOpts(new clang::HeaderSearchOptions());
+		//Havok::ModuleLoader moduleLoader;
+        clang::CompilerInstance moduleLoader;
 		clang::LangOptions langOptions;
 		langOptions.CPlusPlus = 1;
-		langOptions.CPlusPlus0x = 0;
+		langOptions.CPlusPlus11 = 0;
 		langOptions.Bool = 1;
 		langOptions.ConstStrings = 1;
 		langOptions.AssumeSaneOperatorNew = 1;
 		langOptions.ImplicitInt = 0;
 		langOptions.ElideConstructors = 0;
 
-		clang::Preprocessor preprocessor(diagnostics, langOptions, targetInfo.getPtr(), sourceManager, headerSearch, moduleLoader);
-		
-		Havok::FilenamePatternExcluder* filenamePatternExcluder = new Havok::FilenamePatternExcluder(preprocessor, sourceManager);
-		preprocessor.addPPCallbacks(filenamePatternExcluder); // the preprocessor is now owner of the FilenamePatternExcluder
-		clang::PreprocessorOptions preprocessorOptions;
+		clang::HeaderSearch headerSearch(HSOpts, sourceManager, *diagnosticsEngine, langOptions, targetInfo.get());
+
+		llvm::IntrusiveRefCntPtr<clang::PreprocessorOptions> PPOpts (new clang::PreprocessorOptions());
+        llvm::IntrusiveRefCntPtr<clang::Preprocessor> preprocessor (new clang::Preprocessor(PPOpts, *diagnosticsEngine, langOptions, sourceManager, headerSearch, moduleLoader));
+
+        preprocessor->Initialize(*targetInfo);
+
+        diagnosticConsumer.BeginSourceFile (langOptions, preprocessor.get());
+
+		Havok::FilenamePatternExcluder* filenamePatternExcluder = new Havok::FilenamePatternExcluder(*preprocessor.get(), sourceManager);
+		preprocessor->addPPCallbacks(filenamePatternExcluder); // the preprocessor is now owner of the FilenamePatternExcluder
 		clang::HeaderSearchOptions headerSearchOptions;
 		clang::FrontendOptions frontendOptions;
 
 		std::string errorInfo;
-		llvm::raw_fd_ostream outstream(o_outputFilename.c_str(), errorInfo);
+		llvm::raw_fd_ostream outstream(o_outputFilename.c_str(), errorInfo, llvm::sys::fs::OpenFlags::F_None);
 		{
-			// Gather input files into a memory 
+			// Gather input files into a memory
 			std::string mainFileText;
 			llvm::raw_string_ostream stream(mainFileText);
 
 			// Print the LLVMClangParser working directory
-			{
-				llvm::sys::Path cwd = llvm::sys::Path::GetCurrentDirectory();
-				outstream << "InvocationWorkingDirectory( path='" << cwd.c_str() << "' )\n";
-			}
+			/*
+			 *{
+			 *    auto cwd = llvm::sys::path::GetCurrentDirectory();
+			 *    outstream << "InvocationWorkingDirectory( path='" << cwd.c_str() << "' )\n";
+			 *}
+			 */
 
 			// -D
 			for( llvm::cl::list<std::string>::iterator iter = o_cppDefines.begin(), end = o_cppDefines.end(); iter != end; ++iter )
@@ -206,17 +234,17 @@ int main(int argc, char **argv)
 			// -I
 			for( std::vector<std::string>::iterator iter = o_includePath.begin(), end = o_includePath.end(); iter != end; ++iter )
 			{
-				headerSearchOptions.AddPath(*iter, clang::frontend::Angled, true, false, false);
+				headerSearchOptions.AddPath(*iter, clang::frontend::Angled, true, false);
 				outstream << "InvocationIncludePath( path='" << *iter << "' )\n";
 			}
 
 			// -exclude
 			{
 				// Do not free buffers associated with the compiler invocation
-				preprocessorOptions.RetainRemappedFileBuffers = true;
+				PPOpts->RetainRemappedFileBuffers = true;
 				for( std::vector<std::string>::iterator iter = o_excludeFilenames.begin(), end = o_excludeFilenames.end(); iter != end; ++iter )
 				{
-					preprocessorOptions.addRemappedFile(iter->c_str(), emptyMemoryBuffer);
+					PPOpts->addRemappedFile(iter->c_str(), emptyMemoryBuffer);
 				}
 			}
 
@@ -253,36 +281,39 @@ int main(int argc, char **argv)
 			}
 			for( std::vector<std::string>::iterator iter = o_inputFilenames.begin(), end = o_inputFilenames.end(); iter != end; ++iter )
 			{
-				stream << "#include<" << iter->c_str() << ">\n";
+				stream << "#include <" << iter->c_str() << ">\n";
 				outstream << "InvocationInput( path='" << iter->c_str() << "' )\n";
 			}
 			stream.flush();
 
 			llvm::MemoryBuffer* mainBuf = llvm::MemoryBuffer::getMemBufferCopy( llvm::StringRef(mainFileText.c_str(), mainFileText.size()), "masterInputFile" );
-			sourceManager.createMainFileIDForMemBuffer(mainBuf);
+			sourceManager.setMainFileID(sourceManager.createFileID(mainBuf));
 		}
 		std::string resourceDir = o_resourceDir;
 		if(!resourceDir.empty())
 		{
 			resourceDir += "/include";
-			headerSearchOptions.AddPath(resourceDir, clang::frontend::System, false, false, true);
+			headerSearchOptions.AddPath(resourceDir, clang::frontend::System, false, false);
 		}
 
-		clang::InitializePreprocessor( preprocessor, clang::PreprocessorOptions(), headerSearchOptions, frontendOptions);
+		clang::InitializePreprocessor( *preprocessor.get(), *PPOpts, frontendOptions);
 
 		Havok::ExtractASTConsumer consumer(outstream);
 		clang::IdentifierTable identifierTable(langOptions);
 		clang::SelectorTable selectorTable;
 		clang::Builtin::Context builtinContext;
-		clang::ASTContext astcontext( langOptions, sourceManager, targetInfo.getPtr(), identifierTable, selectorTable, builtinContext, 0);
+
+		llvm::IntrusiveRefCntPtr<clang::ASTContext> astcontext(new clang::ASTContext(langOptions, sourceManager, identifierTable, selectorTable, builtinContext));
+
+        astcontext->InitBuiltinTypes(*targetInfo.get());
 
 		#ifdef _DEBUG
 			outstream.SetUnbuffered();
 		#endif
-		diagnostics.getClient()->BeginSourceFile(langOptions);
-		clang::ParseAST(preprocessor, &consumer, astcontext);
-		diagnostics.getClient()->EndSourceFile();
-		exitStatus = diagnostics.hasErrorOccurred() ? 1 : 0;
+		//diagnosticsEngine.getClient()->BeginSourceFile(langOptions);
+		clang::ParseAST(*preprocessor.get(), &consumer, *astcontext.get());
+		//diagnosticsEngine.getClient()->EndSourceFile();
+		exitStatus = diagnosticsEngine->hasErrorOccurred() ? 1 : 0;
 		if(exitStatus == 0)
 		{
 			// AST parsing succeeded, proceed with declaration dumping
