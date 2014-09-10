@@ -290,6 +290,7 @@ int main(int argc, char **argv)
 		#endif
 		//diagnosticsEngine.getClient()->BeginSourceFile(langOptions);
 		clang::ParseAST(*preprocessor.get(), &consumer, *astcontext.get());
+        diagnosticConsumer.EndSourceFile();
 		//diagnosticsEngine.getClient()->EndSourceFile();
 		exitStatus = diagnosticsEngine->hasErrorOccurred() ? 1 : 0;
 		if(exitStatus == 0)
