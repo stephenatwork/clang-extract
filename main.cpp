@@ -184,12 +184,11 @@ int main(int argc, char **argv)
 			llvm::raw_string_ostream stream(mainFileText);
 
 			// Print the LLVMClangParser working directory
-			/*
-			 *{
-			 *    auto cwd = llvm::sys::path::GetCurrentDirectory();
-			 *    outstream << "InvocationWorkingDirectory( path='" << cwd.c_str() << "' )\n";
-			 *}
-			 */
+            {
+                llvm::SmallString<128> cwd;
+                llvm::sys::fs::current_path (cwd);
+                outstream << "InvocationWorkingDirectory( path='" << cwd.c_str() << "' )\n";
+            }
 
 			// -D
 			for( llvm::cl::list<std::string>::iterator iter = o_cppDefines.begin(), end = o_cppDefines.end(); iter != end; ++iter )
