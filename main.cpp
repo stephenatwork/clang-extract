@@ -47,29 +47,6 @@ static inline bool s_fileNameMatch(const char* path, const char* pattern)
 
 namespace Havok
 {
-	// Module loader
-	class ModuleLoader : public clang::ModuleLoader
-	{
-		public:
-
-			virtual ModuleLoadResult loadModule(SourceLocation,
-												ModuleIdPath,
-												Module::NameVisibilityKind,
-												bool) override
-			{
-				assert(0);
-				return clang::ModuleLoadResult();
-			}
-
-			virtual void makeModuleVisible(Module *,
-										   Module::NameVisibilityKind,
-										   SourceLocation,
-										   bool) override
-			{
-				assert(0);
-			}
-
-	};
 	// Preprocessor callbacks used to exclude specific included files (with #include)
 	// When the preprocessor processes a file, it will generate callbacks to this object
 	// on various events, when an inclusion directive is detected we will simply look
@@ -172,7 +149,9 @@ int main(int argc, char **argv)
 		clang::SourceManager sourceManager(*diagnosticsEngine, fileManager);
 
 		llvm::IntrusiveRefCntPtr<clang::HeaderSearchOptions> HSOpts(new clang::HeaderSearchOptions());
-		//Havok::ModuleLoader moduleLoader;
+        //Havok::ModuleLoader moduleLoader; apparently not needed anymore
+        // as we're going to use clang::CompilerInstance moduleLoader directly
+
         clang::CompilerInstance moduleLoader;
 		clang::LangOptions langOptions;
 		langOptions.CPlusPlus = 1;
