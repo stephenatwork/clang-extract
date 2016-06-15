@@ -12,7 +12,8 @@ CXXFLAGS := -I$(LLVM_DIR)/include -I$(LLVM_DIR)/tools/clang/include \
 	-Wno-variadic-macros -Wno-reorder -Wno-trigraphs -Wno-unknown-pragmas -Wno-unused
 LDFLAGS := -L$(LLVM_DIR)/$(CONFIG)/lib
 LIBS := -lclangFrontend -lclangSerialization -lclangParse -lclangSema -lclangAnalysis -lclangAST \
-	-lclangLex -lclangBasic -lLLVMMC -lLLVMCore -lLLVMSupport -lpthread -ldl -lm
+	-lclangEdit -lclangLex -lclangBasic \
+	-lLLVMBitReader -lLLVMMC -lLLVMMCParser -lLLVMCore -lLLVMSupport -lcurses -lpthread -ldl -lm
 
 ifeq ($(CONFIG),"Debug")
 	CXXFLAGS += -DDEBUG -g

@@ -183,7 +183,7 @@ void Havok::ExtractASTConsumer::declareImplicitMethods(Decl* declIn)
 // This includes top-level classes, namespaces, typedefs, constants, enums, functions
 // in every included header file. Contained elements are children of a top-level element.
 // Every element that is parsed is in here somewhere
-void Havok::ExtractASTConsumer::HandleTopLevelDecl(DeclGroupRef declGroupIn)
+bool Havok::ExtractASTConsumer::HandleTopLevelDecl(DeclGroupRef declGroupIn)
 {
 	// If there are multiple declarations with the same semantic type in the same scope they are
 	// returned as a group. [ e.g. class A { ... } B; ] Usually each group only contains one declaration.
@@ -192,6 +192,8 @@ void Havok::ExtractASTConsumer::HandleTopLevelDecl(DeclGroupRef declGroupIn)
 		declareImplicitMethods(*iter);
 		m_decls.push_back(*iter);
 	}
+	
+	return true;
 }
 
 void Havok::ExtractASTConsumer::dumpAllDeclarations()
@@ -422,7 +424,7 @@ int Havok::ExtractASTConsumer::dumpDecl_i(const Decl* declIn)
 		// only dumping information for non-template functions of non-template records or
 		// non-template functions of template records (but not non-template functions
 		// of template record specializations or instantiations).
-		if( methodDecl == methodDecl->getFirstDeclaration() &&
+		if( methodDecl->getPreviousDecl() == nullptr &&
 			tk == FunctionDecl::TK_NonTemplate && // non template function
 			( templateRecord != NULL || // function from a template class declaration
 			  !isa<ClassTemplateSpecializationDecl>(parentRecord) ) ) // not a template instantiation or specialization
@@ -557,7 +559,7 @@ int Havok::ExtractASTConsumer::dumpType_i(QualType qualTypeIn, int scopeId)
 	const Type *const typeIn = qualTypeIn.getTypePtr();
 	int id = dumpNonQualifiedType_i(typeIn, scopeId);
 
-	if (qualTypeIn.getQualifiers() & Qualifiers::Const)
+	if (qualTypeIn.getQualifiers().hasConst())
 	{
 		int retId = findConstTypeId_i(id);
 		if (retId == -1)
@@ -599,7 +601,7 @@ int Havok::ExtractASTConsumer::dumpSimpleType_i(QualType qualTypeIn, int scopeId
 	const Type *const typeIn = qualTypeIn.getTypePtr();
 	int id = dumpNonQualifiedSimpleType_i(typeIn, scopeId);
 
-	if (qualTypeIn.getQualifiers() & Qualifiers::Const)
+	if (qualTypeIn.getQualifiers().hasConst())
 	{
 		int retId = findConstTypeId_i(id);
 		if (retId == -1)
@@ -709,12 +711,12 @@ int Havok::ExtractASTConsumer::dumpNonQualifiedSimpleType_i(const Type* typeIn, 
 	}
 	else if( const FunctionProtoType* bt = typeIn->getAs<FunctionProtoType>() )
 	{
-		int resType = dumpType_i(bt->getResultType());
-		const int numArgs = bt->getNumArgs();
+		int resType = dumpType_i(bt->getReturnType());
+		const int numArgs = bt->getNumParams();
 		std::vector<int> paramTypes;
 		for(int i = 0; i < numArgs; ++i)
 		{
-			paramTypes.push_back(dumpType_i(bt->getArgType(i)));
+			paramTypes.push_back(dumpType_i(bt->getParamType(i)));
 		}
 		retId = m_uid.alloc();
 		m_os << "FunctionProtoType( id=" << retId << ", rettypeid=" << resType << ", paramtypeids=[";
